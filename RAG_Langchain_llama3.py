@@ -47,6 +47,7 @@ collection = client.create_collection(name='docs')
 max_iterations = 5
 
 # Function to process a single document chunk
+# Also don't forget to put your llm model downloaded locally
 def process_document_chunk(i, chunk):
     try:
         response = ollama.embeddings(model="llama3", prompt=chunk.page_content)
@@ -73,8 +74,8 @@ print(f"Processing completed in {time.time() - start_time} seconds.")
 
 # Example prompt
 # prompt = "What animals are llamas related to?"
-# prompt = "What is Milestones?"
-prompt = "what is ADSE?"
+# prompt = "What is ADSE?"
+prompt = "summaries the entire document for me?"
 
 # Generate an embedding for the prompt and retrieve the most relevant doc
 response = ollama.embeddings(
