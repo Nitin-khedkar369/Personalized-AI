@@ -15,12 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 
 # Document path where the file exists
-# DATA_PATH = "data/Fund Management Policy Guidelines and Procedure.pdf"
-# DATA_PATH = "data/monopoly.pdf"
-# DATA_PATH = "data/SIC - 01 - 03 - 01 - Manage Inadequate Seed Money .pdf"
-# DATA_PATH = "data/CE Process.pdf"
-DATA_PATH = "data/AlBawani Proposal v1.0.docx"
-# DATA_PATH = "data/Handwritten Image.png"
+# Mine is in data folder hence data/file name
+DATA_PATH = "data/Add your document path here"
 
 
 # Load the required documents
@@ -143,7 +139,8 @@ print(output['response'])
 # import time
 #
 # # Document path where the file exists
-# DATA_PATH = "data/AlBawani Proposal v1.0.docx"
+# # Mine is in data folder hence data/file name
+# DATA_PATH = "Add document path"
 #
 # # Load the required documents
 # document_loader = UnstructuredWordDocumentLoader(DATA_PATH)
