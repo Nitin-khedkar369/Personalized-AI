@@ -12,7 +12,7 @@ from langchain_community.document_loaders import UnstructuredImageLoader
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # Document path where the image file exists
-DATA_PATH = "data/Handwritten Image.jpg"
+DATA_PATH = "OCR/Handwritten Image.jpg"
 
 # Load the image and extract text using pytesseract
 image = Image.open(DATA_PATH)

@@ -1,16 +1,13 @@
 # Import the dependent libraries
-import docx
 import chromadb
 import ollama
-# Importing libraries to read images
-import pytesseract
-from PIL import Image
 # Importing libraries to PDF and Doc
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_community.document_loaders import UnstructuredWordDocumentLoader
 # Importing libraries to split
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+# Importing libraries to multi-threading
 from concurrent.futures import ThreadPoolExecutor
 import time
 
@@ -59,17 +56,15 @@ collection = client.create_collection(name='docs')
 max_iterations = 5
 
 # Function to process a single document chunk
-# Also don't forget to put your llm model downloaded locally
+# Also don't forget to put your llm model downloaded locally for example I have used llama3
 def process_document_chunk(i, chunk):
     try:
-        # response = ollama.embeddings(model="llama3", prompt=chunk['page_content'])
         response = ollama.embeddings(model="llama3", prompt=chunk.page_content)
         embedding = response["embedding"]
         collection.add(
             ids=[str(i)],
             embeddings=[embedding],
             documents=[chunk.page_content]
-            # documents=[chunk['page_content']]
         )
         print(f"Processed chunk {i}")
     except Exception as e:
@@ -129,8 +124,6 @@ print(output['response'])
 # import docx
 # import chromadb
 # import ollama
-# import pytesseract
-# from PIL import Image
 # from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, UnstructuredWordDocumentLoader
 # from langchain.text_splitter import RecursiveCharacterTextSplitter
 # from concurrent.futures import ThreadPoolExecutor
