@@ -8,6 +8,7 @@ from PIL import Image
 from langchain_community.document_loaders import UnstructuredImageLoader
 
 # Specify the path to the Tesseract executable if necessary
+# Download OCR engine from https://github.com/UB-Mannheim/tesseract/wiki if required or used other OCR engine
 # For example, on Windows:
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
