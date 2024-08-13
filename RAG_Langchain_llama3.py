@@ -13,18 +13,19 @@ import time
 
 # Document path where the file exists
 # Mine is in data folder hence data/file name
-DATA_PATH = "data/Add your document path here"
+DATA_PATH = "data/work flow - إصدار تصاريح التصوير (2).pdf"
 
 
 # Load the required documents
 # To Load PDF
-# document_loader = PyPDFLoader(DATA_PATH)
-# documents = document_loader.load()
-
-# To Load Word docs
-document_loader = UnstructuredWordDocumentLoader(DATA_PATH)
+document_loader = PyPDFLoader(DATA_PATH)
 documents = document_loader.load()
 
+# To Load Word docs
+# document_loader = UnstructuredWordDocumentLoader(DATA_PATH)
+# documents = document_loader.load()
+
+print("here1")
 
 # Defining the Split i.e how to split,chunk size etc
 text_splitter = RecursiveCharacterTextSplitter(
@@ -45,21 +46,27 @@ text_splitter = RecursiveCharacterTextSplitter(
         ]
 )
 
+print("here2")
+
 # Split the document
 splits = text_splitter.split_documents(documents)
+
+
+print("here3")
 
 # Initialize ChromaDB collection
 client = chromadb.Client()
 collection = client.create_collection(name='docs')
 
+print("here4")
 
 max_iterations = 5
 
 # Function to process a single document chunk
-# Also don't forget to put your llm model downloaded locally for example I have used llama3
+# Also don't forget to put your llm model downloaded locally for example I have used llama3.1:8b
 def process_document_chunk(i, chunk):
     try:
-        response = ollama.embeddings(model="llama3", prompt=chunk.page_content)
+        response = ollama.embeddings(model="llama3.1:8b", prompt=chunk.page_content)
         embedding = response["embedding"]
         collection.add(
             ids=[str(i)],
@@ -80,6 +87,7 @@ with ThreadPoolExecutor(max_workers=5) as executor:
 
 print(f"Processing completed in {time.time() - start_time} seconds.")
 
+print("here5")
 
 # Example prompt
 # prompt = "What is NFPs?"
@@ -90,7 +98,7 @@ prompt = input("Prompt: ")
 # Generate an embedding for the prompt and retrieve the most relevant doc
 response = ollama.embeddings(
     prompt=prompt,
-    model="llama3"
+    model="llama3.1:8b"
 )
 
 results = collection.query(
@@ -102,7 +110,7 @@ data = results["documents"][0][0]
 
 # Generate a response combining the prompt and data we retrieved in step 2
 output = ollama.generate(
-    model="llama3"
+    model="llama3.1:8b"
 
 ,  # Make sure the model name is correctly specified
     prompt=f"Using this data: {data}. Response to this prompt: {prompt}"
@@ -170,7 +178,7 @@ print(output['response'])
 # # Function to process a single document chunk
 # def process_document_chunk(i, chunk):
 #     try:
-#         response = ollama.embeddings(model="llama3", prompt=chunk.page_content)
+#         response = ollama.embeddings(model="llama3.1:8b", prompt=chunk.page_content)
 #         embedding = response["embedding"]
 #         embeddings_list.append(embedding)
 #         documents_list.append(chunk.page_content)
@@ -201,7 +209,7 @@ print(output['response'])
 # # Generate an embedding for the prompt
 # response = ollama.embeddings(
 #     prompt=prompt,
-#     model="llama3"
+#     model="llama3.1:8b"
 # )
 #
 # prompt_embedding = np.array(response["embedding"]).reshape(1, -1)
@@ -212,7 +220,7 @@ print(output['response'])
 #
 # # Generate a response combining the prompt and the closest document
 # output = ollama.generate(
-#     model="llama3",
+#     model="llama3.1:8b",
 #     prompt=f"Using this data: {closest_document}. Response to this prompt: {prompt}"
 # )
 #
