@@ -1,6 +1,7 @@
 # Import the dependent libraries
 import chromadb
 import ollama
+from transformers import LlamaTokenizer
 # Importing libraries to PDF and Doc
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.document_loaders import DirectoryLoader
@@ -10,10 +11,12 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 # Importing libraries to multi-threading
 from concurrent.futures import ThreadPoolExecutor
 import time
+# Importing library to check the cpu in your system
+import os
 
 # Document path where the file exists
 # Mine is in data folder hence data/file name
-DATA_PATH = "data/Harry-Potter-and-The-Philosophers-Stone.pdf"
+DATA_PATH = "data/harry_potter_and_the_deathly_hallows.pdf"
 
 
 # Load the required documents
@@ -28,8 +31,8 @@ documents = document_loader.load()
 
 # Defining the Split i.e how to split,chunk size etc
 text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000,
-    chunk_overlap=90,
+        chunk_size=1500,
+    chunk_overlap=100,
     separators=[
             "\n\n",
             "\n",
@@ -49,7 +52,6 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 # Split the document
 splits = text_splitter.split_documents(documents)
-
 
 
 # Initialize ChromaDB collection
@@ -74,9 +76,18 @@ def process_document_chunk(i, chunk):
     except Exception as e:
         print(f"Error processing chunk {i}: {e}")
 
+# Run the below code to check the max CPU core we can use for parallel processing
+# To check Max worker in your CPU
+# max_workers = os.cpu_count()
+# print(f"Using {max_workers} workers.")
+
+# Ideal number of CPU to balance between system load and thread utility.
+max_workers = min(32, (os.cpu_count() or 1) + 4)
+# print(f"Using Ideal number of {max_workers} workers.")
+
 # Using ThreadPoolExecutor for parallel processing
 start_time = time.time()
-with ThreadPoolExecutor(max_workers=9) as executor:
+with ThreadPoolExecutor(max_workers=max_workers) as executor:
     for i, chunk in enumerate(splits):
         if i >= max_iterations:
             break  # Stop after max_iterations
@@ -85,16 +96,14 @@ with ThreadPoolExecutor(max_workers=9) as executor:
 print(f"Processing completed in {time.time() - start_time} seconds.")
 
 
+
 # Example prompt
-# prompt = "What is NFPs?"
-# prompt = "What is ADSE?"
-# prompt = "whats the development time?"
 prompt = ""
-while prompt!= "Bye":
+while prompt.lower() not in ["bye", "b", "exit"]:
 
     prompt = input("Prompt: ")
-    if prompt == "Bye":
-        print("ADIOS Amigos see you later!")
+    if prompt.lower() in ["bye", "b", "exit"]:
+        print("ADIOS Amigos thanks for interacting with me see you later!")
         break
 
 
