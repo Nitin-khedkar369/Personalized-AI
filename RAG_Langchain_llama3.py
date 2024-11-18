@@ -1,39 +1,92 @@
 # Import the dependent libraries
 import chromadb
 import ollama
-from transformers import LlamaTokenizer
-# Importing libraries to PDF and Doc
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_community.document_loaders import DirectoryLoader
-from langchain_community.document_loaders import UnstructuredWordDocumentLoader
-# Importing libraries to split
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    UnstructuredWordDocumentLoader,
+    DirectoryLoader
+)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-# Importing libraries to multi-threading
 from concurrent.futures import ThreadPoolExecutor
-import time
-# Importing library to check the cpu in your system
 import os
+import time
 
-# Document path where the file exists
-# Mine is in data folder hence data/file name
-DATA_PATH = "data/harry_potter_and_the_deathly_hallows.pdf"
+# Path to the folder containing files
+DATA_PATH = "data/"
 
-
-# Load the required documents
-# To Load PDF
-document_loader = PyPDFLoader(DATA_PATH)
-documents = document_loader.load()
-
-# To Load Word docs
-# document_loader = UnstructuredWordDocumentLoader(DATA_PATH)
-# documents = document_loader.load()
+# Initialize ChromaDB collection
+client = chromadb.Client()
+collection = client.create_collection(name='docs')
 
 
-# Defining the Split i.e how to split,chunk size etc
-text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1500,
-    chunk_overlap=100,
-    separators=[
+def determine_chunk_parameters(documents, max_chunks=1000):
+    """
+    Automatically determine chunk size and overlap based on the document properties.
+
+    Args:
+        documents (list): A list of document objects with content.
+        max_chunks (int): Maximum number of chunks desired.
+
+    Returns:
+        tuple: Optimal chunk size and chunk overlap.
+    """
+    total_content = "".join([doc.page_content for doc in documents])
+    total_length = len(total_content)
+
+    # Automatically calculate chunk size to fit within max_chunks
+    optimal_chunk_size = max(1000, min(total_length // max_chunks, 3000))
+
+    # Set chunk overlap as 10% of the chunk size, ensuring minimum overlap
+    optimal_chunk_overlap = max(100, optimal_chunk_size // 10)
+
+    return optimal_chunk_size, optimal_chunk_overlap
+
+
+# Function to list supported files in the directory
+def list_files(folder_path):
+    files = [f for f in os.listdir(folder_path) if f.endswith((".pdf", ".docx", ".doc"))]
+    if not files:
+        print("No supported files found in the directory.")
+        return None
+    print("Available files:")
+    for idx, file in enumerate(files, 1):
+        print(f"{idx}. {file}")
+    return files
+
+
+# Function to select a file
+def select_file(files):
+    while True:
+        try:
+            choice = int(input("Select a file by entering its number: "))
+            if 1 <= choice <= len(files):
+                return files[choice - 1]
+            else:
+                print("Invalid choice. Please try again.")
+        except ValueError:
+            print("Please enter a valid number.")
+
+
+# Function to load and split a selected document
+def load_and_split_document(file_path):
+    extension = os.path.splitext(file_path)[1].lower()
+    if extension == ".pdf":
+        loader = PyPDFLoader(file_path)
+    elif extension in [".docx", ".doc"]:
+        loader = UnstructuredWordDocumentLoader(file_path)
+    else:
+        raise ValueError(f"Unsupported file format: {extension}")
+
+    documents = loader.load()
+
+    # Determine optimal chunk size and overlap
+    chunk_size, chunk_overlap = determine_chunk_parameters(documents)
+
+    # Define the text splitter
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=[
             "\n\n",
             "\n",
             " ",
@@ -46,26 +99,16 @@ text_splitter = RecursiveCharacterTextSplitter(
             "\u3002",  # Ideographic full stop
             "",
         ]
-)
+    )
+    print(f"Chunk Size: {chunk_size}, Chunk Overlap: {chunk_overlap}")
+    splits = text_splitter.split_documents(documents)
+    return splits, chunk_size
 
-
-
-# Split the document
-splits = text_splitter.split_documents(documents)
-
-
-# Initialize ChromaDB collection
-client = chromadb.Client()
-collection = client.create_collection(name='docs')
-
-
-max_iterations = 5
 
 # Function to process a single document chunk
-# Also don't forget to put your llm model downloaded locally for example I have used llama3.1:8b
 def process_document_chunk(i, chunk):
     try:
-        response = ollama.embeddings(model="llama3.1:8b", prompt=chunk.page_content)
+        response = ollama.embeddings(model="llama3.2:latest", prompt=chunk.page_content)
         embedding = response["embedding"]
         collection.add(
             ids=[str(i)],
@@ -76,55 +119,62 @@ def process_document_chunk(i, chunk):
     except Exception as e:
         print(f"Error processing chunk {i}: {e}")
 
-# Run the below code to check the max CPU core we can use for parallel processing
-# To check Max worker in your CPU
-# max_workers = os.cpu_count()
-# print(f"Using {max_workers} workers.")
 
-# Ideal number of CPU to balance between system load and thread utility.
-max_workers = min(32, (os.cpu_count() or 1) + 4)
-# print(f"Using Ideal number of {max_workers} workers.")
+# Main logic
+def main():
+    # List available files
+    files = list_files(DATA_PATH)
+    if not files:
+        return
 
-# Using ThreadPoolExecutor for parallel processing
-start_time = time.time()
-with ThreadPoolExecutor(max_workers=max_workers) as executor:
-    for i, chunk in enumerate(splits):
-        if i >= max_iterations:
-            break  # Stop after max_iterations
-        executor.submit(process_document_chunk, i, chunk)
+    # Let the user select a file
+    selected_file = select_file(files)
+    file_path = os.path.join(DATA_PATH, selected_file)
+    print(f"Selected file: {selected_file}")
 
-print(f"Processing completed in {time.time() - start_time} seconds.")
+    # Load and split the selected document
+    splits, chunk_size = load_and_split_document(file_path)
+
+    print(f"chunk size:{chunk_size}")
+
+    if chunk_size < 1200:
+        max_iterations = 5
+    else:
+        max_iterations = 9
+
+    # Use ThreadPoolExecutor for parallel processing
+    max_workers = min(32, (os.cpu_count() or 1) + 4)
+    start_time = time.time()
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        for i, chunk in enumerate(splits):
+            if i > max_iterations:
+                break # Stop after max_iterations
+            executor.submit(process_document_chunk, i, chunk)
+    print(f"Processing completed in {time.time() - start_time} seconds.")
+
+    # Interactive Q&A loop
+    prompt = ""
+    while prompt.lower() not in ["bye", "b", "exit"]:
+        prompt = input("Prompt: ")
+        if prompt.lower() in ["bye", "b", "exit"]:
+            print("ADIOS Amigos! Thanks for interacting with me. See you later!")
+            break
+
+        # Generate an embedding for the prompt
+        response = ollama.embeddings(prompt=prompt, model="llama3.2:latest")
+
+        # Retrieve the most relevant document
+        results = collection.query(query_embeddings=[response["embedding"]], n_results=1)
+        data = results["documents"][0][0]
+
+        # Generate a response combining the prompt and the retrieved document
+        output = ollama.generate(
+            model="llama3.2:latest",
+            prompt=f"Using this data: {data}. Respond to this prompt: {prompt}"
+        )
+
+        print(output['response'])
 
 
-
-# Example prompt
-prompt = ""
-while prompt.lower() not in ["bye", "b", "exit"]:
-
-    prompt = input("Prompt: ")
-    if prompt.lower() in ["bye", "b", "exit"]:
-        print("ADIOS Amigos thanks for interacting with me see you later!")
-        break
-
-
-# Generate an embedding for the prompt and retrieve the most relevant doc
-    response = ollama.embeddings(
-        prompt=prompt,
-        model="llama3.1:8b"
-    )
-
-    results = collection.query(
-        query_embeddings=[response["embedding"]],
-        n_results=1
-    )
-
-    data = results["documents"][0][0]
-
-# Generate a response combining the prompt and data we retrieved in step 2
-    output = ollama.generate(
-# Make sure the model name is correctly specified
-        model="llama3.1:8b",
-        prompt=f"Using this data: {data}. Response to this prompt: {prompt}"
-    )
-
-    print(output['response'])
+if __name__ == "__main__":
+    main()
