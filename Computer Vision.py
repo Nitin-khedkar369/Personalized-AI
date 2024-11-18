@@ -6,6 +6,8 @@ import ollama
 import chromadb
 import json
 import urllib
+import tensorflow as tf
+
 
 # Document path where the image file exists
 DATA_PATH = "Images/image you want run computer vision on"
@@ -92,4 +94,22 @@ output = ollama.generate(
 )
 
 print(output['response'])
+
+
+
+
+
+
+
+
+# # Read and Decode file
+# def read_and_decode(filename, reshape_dims):
+#     # 1. Read the file
+#     img = tf.io.read_file("Images/Peacock.jpg")
+#     # 2. Convert the compressed string to a 3D unit8 tensor.
+#     img = tf.image.decode_jpeg(img, channels=3)
+#     # 3. Convert 3D unit8 to float in the [0,1] range
+#     img = tf.image.convert_image_dtype(img, tf.float32)
+#     # 4. Resize the image to desire size if needed
+#     return tf.image.resize(img, reshape_dims)
 

@@ -1,3 +1,463 @@
+# # Import the dependent libraries
+# import chromadb
+# import ollama
+# from transformers import LlamaTokenizer
+# # Importing libraries to PDF and Doc
+# from langchain_community.document_loaders import PyPDFLoader
+# from langchain_community.document_loaders import DirectoryLoader
+# from langchain_community.document_loaders import UnstructuredWordDocumentLoader
+# # Importing libraries to split
+# from langchain.text_splitter import RecursiveCharacterTextSplitter
+# # Importing libraries to multi-threading
+# from concurrent.futures import ThreadPoolExecutor
+# import time
+# # Importing library to check the cpu in your system
+# import os
+#
+# # Document path where the file exists
+# # Mine is in data folder hence data/file name
+# DATA_PATH = "data/"
+#
+#
+# # Load the required documents
+# # To Load PDF
+# document_loader = PyPDFLoader(DATA_PATH)
+# documents = document_loader.load()
+#
+#
+# # To Load Word docs
+# # document_loader = UnstructuredWordDocumentLoader(DATA_PATH)
+# # documents = document_loader.load()
+#
+#
+# # Defining the Split i.e how to split,chunk size etc
+# text_splitter = RecursiveCharacterTextSplitter(
+#         chunk_size=1500,
+#     chunk_overlap=100,
+#     separators=[
+#             "\n\n",
+#             "\n",
+#             " ",
+#             ".",
+#             ",",
+#             "\u200b",  # Zero-width space
+#             "\uff0c",  # Full width comma
+#             "\u3001",  # Ideographic comma
+#             "\uff0e",  # Full width full stop
+#             "\u3002",  # Ideographic full stop
+#             "",
+#         ]
+# )
+#
+#
+# # Split the document
+# splits = text_splitter.split_documents(documents)
+#
+#
+# # Initialize ChromaDB collection
+# client = chromadb.Client()
+# collection = client.create_collection(name='docs')
+#
+#
+# max_iterations = 5
+#
+# # Function to process a single document chunk
+# # Also don't forget to put your llm model downloaded locally for example I have used llama3.1:8b
+# def process_document_chunk(i, chunk):
+#     try:
+#         response = ollama.embeddings(model="llama3.1:8b", prompt=chunk.page_content)
+#         embedding = response["embedding"]
+#         collection.add(
+#             ids=[str(i)],
+#             embeddings=[embedding],
+#             documents=[chunk.page_content]
+#         )
+#         print(f"Processed chunk {i}")
+#     except Exception as e:
+#         print(f"Error processing chunk {i}: {e}")
+#
+# # Run the below code to check the max CPU core we can use for parallel processing
+# # To check Max worker in your CPU
+# # max_workers = os.cpu_count()
+# # print(f"Using {max_workers} workers.")
+#
+# # Ideal number of CPU to balance between system load and thread utility.
+# max_workers = min(32, (os.cpu_count() or 1) + 4)
+# # print(f"Using Ideal number of {max_workers} workers.")
+#
+# # Using ThreadPoolExecutor for parallel processing
+# start_time = time.time()
+# with ThreadPoolExecutor(max_workers=max_workers) as executor:
+#     for i, chunk in enumerate(splits):
+#         if i >= max_iterations:
+#             break  # Stop after max_iterations
+#         executor.submit(process_document_chunk, i, chunk)
+#
+# print(f"Processing completed in {time.time() - start_time} seconds.")
+#
+#
+#
+# # Example prompt
+# prompt = ""
+# while prompt.lower() not in ["bye", "b", "exit"]:
+#
+#     prompt = input("Prompt: ")
+#     if prompt.lower() in ["bye", "b", "exit"]:
+#         print("ADIOS Amigos thanks for interacting with me see you later!")
+#         break
+#
+#
+# # Generate an embedding for the prompt and retrieve the most relevant doc
+#     response = ollama.embeddings(
+#         prompt=prompt,
+#         model="llama3.1:8b"
+#     )
+#
+#     results = collection.query(
+#         query_embeddings=[response["embedding"]],
+#         n_results=1
+#     )
+#
+#     data = results["documents"][0][0]
+#
+# # Generate a response combining the prompt and data we retrieved in step 2
+#     output = ollama.generate(
+# # Make sure the model name is correctly specified
+#         model="llama3.1:8b",
+#         prompt=f"Using this data: {data}. Response to this prompt: {prompt}"
+#     )
+#
+#     print(output['response'])
+#
+#
+
+
+
+
+
+
+# # Import the dependent libraries
+# import chromadb
+# import ollama
+# import asyncio
+# from transformers import LlamaTokenizer
+# from langchain_community.document_loaders import PyPDFLoader
+# from langchain.text_splitter import RecursiveCharacterTextSplitter
+# from concurrent.futures import ThreadPoolExecutor
+# import os
+# import time
+#
+# # Document path where the file exists
+# DATA_PATH = "data/Harry-Potter-and-The-Philosophers-Stone.pdf"
+#
+# # Load the required document (PDF)
+# document_loader = PyPDFLoader(DATA_PATH)
+# documents = document_loader.load()
+#
+# # Defining the Split (how to split, chunk size, etc.)
+# text_splitter = RecursiveCharacterTextSplitter(
+#     chunk_size=2000,
+#     chunk_overlap=200,
+#     separators=[
+#         "\n\n", "\n", " ", ".", ",",
+#         "\u200b",  # Zero-width space
+#         "\uff0c",  # Full-width comma
+#         "\u3001",  # Ideographic comma
+#         "\uff0e",  # Full-width full stop
+#         "\u3002",  # Ideographic full stop
+#         ""
+#     ]
+# )
+#
+# # Optimize splitting using threading
+# def split_chunk(chunk):
+#     return text_splitter.split_documents([chunk])
+#
+# # Split the document into chunks
+# start_time_split = time.time()
+# max_workers = min(32, (os.cpu_count() or 1) + 4)
+# print(f"Using {max_workers} workers for splitting.")
+# with ThreadPoolExecutor(max_workers=max_workers) as executor:
+#     splits = list(executor.map(split_chunk, documents))
+# splits = [item for sublist in splits for item in sublist]  # Flatten the nested list
+# print(f"Splitting completed in {time.time() - start_time_split} seconds.")
+#
+# # Initialize ChromaDB collection
+# client = chromadb.Client()
+# collection = client.create_collection(name='docs')
+#
+# # Function to asynchronously get embeddings
+# async def get_embedding(chunk):
+#     response = ollama.embeddings(model="llama3.1:8b", prompt=chunk.page_content)
+#     return response["embedding"]
+#
+# # Asynchronous batch processing
+# async def process_async_chunks(chunks, start_index):
+#     tasks = [get_embedding(chunk) for chunk in chunks]
+#     embeddings = await asyncio.gather(*tasks)
+#     ids = [str(start_index + i) for i in range(len(chunks))]
+#     documents = [chunk.page_content for chunk in chunks]
+#     collection.add(ids=ids, embeddings=embeddings, documents=documents)
+#
+# # Main async processing function
+# async def main():
+#     batch_size = 2  # Adjust based on performance testing
+#     for i in range(0, len(splits), batch_size):
+#         batch = splits[i:i + batch_size]
+#         await process_async_chunks(batch, i)
+#
+# # Run asynchronous processing
+# start_time_process = time.time()
+# asyncio.run(main())
+# print(f"Processing completed in {time.time() - start_time_process} seconds.")
+#
+# # Querying the database
+# prompt = ""
+# while prompt.lower() not in ["bye", "b"]:
+#     prompt = input("Prompt: ")
+#     if prompt.lower() in ["bye", "b"]:
+#         print("ADIOS Amigos! Thanks for interacting. See you later!")
+#         break
+#
+#     # Generate an embedding for the prompt and retrieve the most relevant document
+#     response = ollama.embeddings(prompt=prompt, model="llama3.1:8b")
+#     results = collection.query(query_embeddings=[response["embedding"]], n_results=1)
+#
+#     # Fetch the most relevant document
+#     data = results["documents"][0][0]
+#
+#     # Generate a response using the data
+#     output = ollama.generate(
+#         model="llama3.1:8b",
+#         prompt=f"Using this data: {data}. Response to this prompt: {prompt}"
+#     )
+#     print(output['response'])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ADDED SCIKIT-LEARN LIBRARIES
+# # Import the dependent libraries
+# import docx
+# import chromadb
+# import ollama
+# from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader, UnstructuredWordDocumentLoader
+# from langchain.text_splitter import RecursiveCharacterTextSplitter
+# from concurrent.futures import ThreadPoolExecutor
+# from sklearn.neighbors import NearestNeighbors
+# import numpy as np
+# import time
+#
+# # Document path where the file exists
+# # Mine is in data folder hence data/file name
+# DATA_PATH = "Add document path"
+#
+# # Load the required documents
+# document_loader = UnstructuredWordDocumentLoader(DATA_PATH)
+# documents = document_loader.load()
+#
+# # Defining the Split i.e. how to split, chunk size etc.
+# text_splitter = RecursiveCharacterTextSplitter(
+#     chunk_size=1000,
+#     chunk_overlap=90,
+#     separators=[
+#             "\n\n",
+#             "\n",
+#             " ",
+#             ".",
+#             ",",
+#             "\u200b",  # Zero-width space
+#             "\uff0c",  # Full width comma
+#             "\u3001",  # Ideographic comma
+#             "\uff0e",  # Full width full stop
+#             "\u3002",  # Ideographic full stop
+#             "",
+#         ]
+# )
+#
+# # Split the document
+# splits = text_splitter.split_documents(documents)
+#
+# # Initialize lists for storing embeddings and documents
+# embeddings_list = []
+# documents_list = []
+#
+# max_iterations = 5
+#
+# # Function to process a single document chunk
+# def process_document_chunk(i, chunk):
+#     try:
+#         response = ollama.embeddings(model="llama3.1:8b", prompt=chunk.page_content)
+#         embedding = response["embedding"]
+#         embeddings_list.append(embedding)
+#         documents_list.append(chunk.page_content)
+#         print(f"Processed chunk {i}")
+#     except Exception as e:
+#         print(f"Error processing chunk {i}: {e}")
+#
+# # Using ThreadPoolExecutor for parallel processing
+# start_time = time.time()
+# with ThreadPoolExecutor(max_workers=5) as executor:
+#     for i, chunk in enumerate(splits):
+#         if i >= max_iterations:
+#             break  # Stop after max_iterations
+#         executor.submit(process_document_chunk, i, chunk)
+#
+# executor.shutdown(wait=True)
+# print(f"Processing completed in {time.time() - start_time} seconds.")
+#
+# # Convert lists to numpy arrays for sklearn
+# embeddings_array = np.array(embeddings_list)
+#
+# # Initialize NearestNeighbors model
+# neighbors_model = NearestNeighbors(n_neighbors=1, algorithm='auto').fit(embeddings_array)
+#
+# # Example prompt
+# prompt = input("Prompt: ")
+#
+# # Generate an embedding for the prompt
+# response = ollama.embeddings(
+#     prompt=prompt,
+#     model="llama3.1:8b"
+# )
+#
+# prompt_embedding = np.array(response["embedding"]).reshape(1, -1)
+#
+# # Find the nearest document
+# distances, indices = neighbors_model.kneighbors(prompt_embedding)
+# closest_document = documents_list[indices[0][0]]
+#
+# # Generate a response combining the prompt and the closest document
+# output = ollama.generate(
+#     model="llama3.1:8b",
+#     prompt=f"Using this data: {closest_document}. Response to this prompt: {prompt}"
+# )
+#
+# print(output['response'])
+
+
+
+
+
+
+
+# # TO READ ALL THE DOCUMENT FROM A FOLDER
+# # Import the dependent libraries
+# import chromadb
+# import ollama
+# from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
+# from langchain.text_splitter import RecursiveCharacterTextSplitter
+# from concurrent.futures import ThreadPoolExecutor
+# import time
+# import os
+#
+# # Path to the folder containing PDF files
+# DATA_PATH = "data/"
+#
+# # Initialize ChromaDB collection
+# client = chromadb.Client()
+# collection = client.create_collection(name='docs')
+#
+# # Defining the Split logic
+# text_splitter = RecursiveCharacterTextSplitter(
+#     chunk_size=1500,
+#     chunk_overlap=100,
+#     separators=[
+#         "\n\n", "\n", " ", ".", ",", "\u200b", "\uff0c", "\u3001", "\uff0e", "\u3002", ""
+#     ]
+# )
+#
+# # Function to load and split all PDF documents
+# def load_and_split_documents(folder_path):
+#     loader = DirectoryLoader(folder_path, glob="*.pdf", loader_cls=PyPDFLoader)
+#     documents = loader.load()
+#     splits = text_splitter.split_documents(documents)
+#     return splits
+#
+# # Function to process a single document chunk
+# def process_document_chunk(i, chunk):
+#     try:
+#         response = ollama.embeddings(model="llama3.1:8b", prompt=chunk.page_content)
+#         embedding = response["embedding"]
+#         collection.add(
+#             ids=[str(i)],
+#             embeddings=[embedding],
+#             documents=[chunk.page_content]
+#         )
+#         print(f"Processed chunk {i}")
+#     except Exception as e:
+#         print(f"Error processing chunk {i}: {e}")
+#
+# # Load and split all documents
+# splits = load_and_split_documents(DATA_PATH)
+#
+#
+# max_iterations = 5
+#
+# # Use ThreadPoolExecutor for parallel processing
+# max_workers = min(32, (os.cpu_count() or 1) + 4)
+# start_time = time.time()
+# with ThreadPoolExecutor(max_workers=max_workers) as executor:
+#     for i, chunk in enumerate(splits):
+#         if i >= max_iterations:
+#             break  # Stop after max_iterations
+#         executor.submit(process_document_chunk, i, chunk)
+#
+# print(f"Processing completed in {time.time() - start_time} seconds.")
+#
+# # Interactive Q&A loop
+# prompt = ""
+# while prompt.lower() not in ["bye", "b", "exit"]:
+#     prompt = input("Prompt: ")
+#     if prompt.lower() in ["bye", "b", "exit"]:
+#         print("ADIOS Amigos! Thanks for interacting with me. See you later!")
+#         break
+#
+#     # Generate an embedding for the prompt
+#     response = ollama.embeddings(prompt=prompt, model="llama3.1:8b")
+#
+#     # Retrieve the most relevant document
+#     results = collection.query(query_embeddings=[response["embedding"]], n_results=1)
+#     data = results["documents"][0][0]
+#
+#     # Generate a response combining the prompt and the retrieved document
+#     output = ollama.generate(
+#         model="llama3.1:8b",
+#         prompt=f"Using this data: {data}. Respond to this prompt: {prompt}"
+#     )
+#
+#     print(output['response'])
+
+
+
+
+
+
+
 # Import the dependent libraries
 import chromadb
 import ollama
@@ -10,6 +470,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from concurrent.futures import ThreadPoolExecutor
 import os
 import time
+import keyboard
 
 # Path to the folder containing files
 DATA_PATH = "data/"
@@ -154,9 +615,16 @@ def main():
 
     # Interactive Q&A loop
     prompt = ""
-    while prompt.lower() not in ["bye", "b", "exit"]:
+    print("To exit type 'bye' or 'exit' in the prompt.")
+
+    while True:
+        if keyboard.is_pressed("esc"):
+            print("ADIOS Amigos! Thanks for interacting with me. See you later!")
+            break
+
         prompt = input("Prompt: ")
-        if prompt.lower() in ["bye", "b", "exit"]:
+
+        if prompt.lower() in ["bye", "exit"]:
             print("ADIOS Amigos! Thanks for interacting with me. See you later!")
             break
 
@@ -178,3 +646,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
