@@ -12,6 +12,7 @@ import os
 import time
 import keyboard
 
+
 # Path to the folder containing files
 DATA_PATH = "data/"
 
@@ -136,8 +137,6 @@ def main():
     # Load and split the selected document
     splits, chunk_size = load_and_split_document(file_path)
 
-    print(f"chunk size:{chunk_size}")
-
     if chunk_size < 1200:
         max_iterations = 5
     else:
@@ -158,10 +157,6 @@ def main():
     print("To exit type 'bye' or 'exit' in the prompt.")
 
     while True:
-        if keyboard.is_pressed("esc"):
-            print("ADIOS Amigos! Thanks for interacting with me. See you later!")
-            break
-
         prompt = input("Prompt: ")
 
         if prompt.lower() in ["bye", "exit"]:
@@ -186,12 +181,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
 
 
