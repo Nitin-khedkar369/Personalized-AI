@@ -10,6 +10,7 @@ import chromadb
 
 # Flask app initialization
 app = Flask(__name__)
+# Path to the folder containing files
 UPLOAD_FOLDER = "data"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -39,7 +40,9 @@ def process_file(file_path):
         raise ValueError(f"Unsupported file format: {extension}")
 
     documents = loader.load()
+
     chunk_size, chunk_overlap = determine_chunk_parameters(documents)
+
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,

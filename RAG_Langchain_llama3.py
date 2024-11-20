@@ -12,7 +12,6 @@ import os
 import time
 import keyboard
 
-
 # Path to the folder containing files
 DATA_PATH = "data/"
 
