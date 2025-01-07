@@ -69,7 +69,7 @@ def process_file(file_path):
 # Process and embed a document chunk
 def process_document_chunk(i, chunk):
     try:
-        response = ollama.embeddings(model="llama3.2:latest", prompt=chunk.page_content)
+        response = ollama.embeddings(model="nomic-embed-text", prompt=chunk.page_content)
         embedding = response["embedding"]
         collection.add(ids=[str(i)], embeddings=[embedding], documents=[chunk.page_content])
     except Exception as e:
@@ -271,7 +271,7 @@ def upload_file():
 @app.route("/query", methods=["POST"])
 def query():
     prompt = request.form.get("prompt")
-    response = ollama.embeddings(prompt=prompt, model="llama3.2:latest")
+    response = ollama.embeddings(prompt=prompt, model="nomic-embed-text")
     results = collection.query(query_embeddings=[response["embedding"]], n_results=1)
     data = results["documents"][0][0]
     output = ollama.generate(model="llama3.2:latest",prompt=f"Using this data: {data}. Respond to this prompt: {prompt}")

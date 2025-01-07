@@ -109,7 +109,7 @@ def load_and_split_document(file_path):
 # Function to process a single document chunk
 def process_document_chunk(i, chunk):
     try:
-        response = ollama.embeddings(model="llama3.2:latest", prompt=chunk.page_content)
+        response = ollama.embeddings(model="nomic-embed-text", prompt=chunk.page_content)
         embedding = response["embedding"]
         collection.add(
             ids=[str(i)],
@@ -163,7 +163,7 @@ def main():
             break
 
         # Generate an embedding for the prompt
-        response = ollama.embeddings(prompt=prompt, model="llama3.2:latest")
+        response = ollama.embeddings(prompt=prompt, model="nomic-embed-text")
 
         # Retrieve the most relevant document
         results = collection.query(query_embeddings=[response["embedding"]], n_results=1)
@@ -180,5 +180,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
