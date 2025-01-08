@@ -134,10 +134,6 @@ def main():
     prompt = st.chat_input("Enter your query:")
 
     if prompt:
-        if prompt.lower() in ["bye", "exit"]:
-            st.write("ADIOS Amigos! Thanks for interacting with me. See you later!")
-            return
-
         # Generate an embedding for the prompt
         response = ollama.embeddings(prompt=prompt, model="nomic-embed-text")
 
