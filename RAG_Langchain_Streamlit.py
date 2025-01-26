@@ -134,7 +134,7 @@ def load_and_split_document(file_path):
 # Function to process a single document chunk
 def process_document_chunk(i, chunk):
     try:
-        # select an embedding model trust me this will make procession document 10x faster
+        # select an embedding model trust me this will make processing the document 10x faster
         response = ollama.embeddings(model="nomic-embed-text:latest", prompt=chunk.page_content)
         embedding = response["embedding"]
         collection.add(
