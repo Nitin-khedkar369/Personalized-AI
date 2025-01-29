@@ -42,9 +42,11 @@ st.markdown("""
             border-radius: 15px;
             padding: 10px;
             display: inline-block;
+
         }
     </style>
 """, unsafe_allow_html=True)
+
 
 def add_message(role, content):
     """Add a message to the session state"""
@@ -233,7 +235,6 @@ def main():
 
         # Starting the session state
         if "messages" not in st.session_state:
-            print("this ran")
             st.session_state.messages = []
 
         with st.spinner("Processing Voice..."):
@@ -281,7 +282,6 @@ def main():
     if prompt:
         # Starting the session state
         if "messages" not in st.session_state:
-            print("this ran")
             st.session_state.messages = []
 
         with st.spinner("Processing your prompt..."):
