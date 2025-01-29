@@ -221,28 +221,29 @@ def main():
                     if i > max_iterations:
                         break  # Stop after max_iterations
                     executor.submit(process_document_chunk, i, chunk)
-            st.write(f"Processing completed in {time.time() - start_time:.2f} seconds.")
+            # st.write(f"Processing completed in {time.time() - start_time:.2f} seconds.")
 
     # Interactive Q&A with text
     st.header("Ask Questions")
-
-    # Starting the session state
-    if "chat_history" not in st.session_state:
-        st.session_state.messages = []
 
     prompt = st.chat_input("Enter your query:", key="chat_input")
 
     # option = ":material/mic:"
     if st.button("🎤 Speak"):
 
-        st.session_state.messages.append(
-            {"role": "user",
-             "content": st.session_state["chat_input"]},
-        )
+        # Starting the session state
+        if "messages" not in st.session_state:
+            print("this ran")
+            st.session_state.messages = []
 
         with st.spinner("Processing Voice..."):
             speech_text = transcribe_speech()
-            start_time = time.time()
+
+            # session state to capture what User said
+            add_message("user", speech_text)
+
+            # start_time = time.time()
+
             # Generate an embedding for the prompt
             response = ollama.embeddings(prompt=speech_text, model="nomic-embed-text:latest")
 
@@ -253,17 +254,14 @@ def main():
                 data = results["documents"][0][0]
                 output = ollama.generate(
                     model="llama3.2:latest",
-                    prompt=f"Using this data: {data}. Respond to this prompt: {speech_text}"
+                    prompt=f"Using this data: {data}. Respond to this prompt: {speech_text} and provide citation for"
+                           f"the text as well which include page number"
                 )
 
-                st.write(f"Processing your answer completed in {time.time() - start_time:.2f} seconds.")
-                # message = st.chat_message("assistant")
-                # message.write(output['response'])
+                # st.write(f"Processing your answer completed in {time.time() - start_time:.2f} seconds.")
+
                 # session state to capture what assistant said
-                st.session_state.messages.append(
-                    {"role": "assistant",
-                     "content": output['response'], },
-                )
+                add_message("assistant", output['response'])
 
                 # Display chat history with custom styling
                 for message in st.session_state.messages:
@@ -281,14 +279,14 @@ def main():
                 # listen = st.pills("Start Listening", option, selection_mode="single")
 
     if prompt:
-        # with st.chat_message("user"):
-        #     st.write("You said:", prompt)
+        # Starting the session state
+        if "messages" not in st.session_state:
+            print("this ran")
+            st.session_state.messages = []
+
         with st.spinner("Processing your prompt..."):
             # session state to capture what User said
-            st.session_state.messages.append(
-                {"role": "user",
-                 "content":st.session_state["chat_input"]},
-            )
+            add_message("user", prompt)
 
             response = ollama.embeddings(prompt=prompt, model="nomic-embed-text:latest")
 
@@ -299,18 +297,16 @@ def main():
                 data = results["documents"][0][0]
                 output = ollama.generate(
                     model="llama3.2:latest",
-                    prompt=f"Using this data: {data}. Respond to this prompt: {prompt}"
+                    prompt=f"Using the provided data: {data}, "
+                           f"extract relevant information to accurately respond to the following prompt: {prompt}. "
+                           f"Provide a well-structured response along with a brief summary. "
+                           f"Ensure that all citations include page numbers from the source data where applicable."
                 )
 
                 # session state to capture what assistant said
-                st.session_state.messages.append(
-                    {"role": "assistant",
-                     "content": output['response'], },
-                )
+                add_message("assistant",output['response'])
 
-                # with st.chat_message("assistant"):
-                #     st.write(output['response'])
-
+            # Display chat history with custom styling
             for message in st.session_state.messages:
                 display_message(message["role"], message["content"])
 
